@@ -1,14 +1,16 @@
-import datetime
+from common import logger
 from db import DataBase
 from scraper import Scraper
 
 
 def run() -> None:
+    logger.set_logger()
+
     database = DataBase()
     database.create_tables()
 
     scraper = Scraper()
-    for movie_data in scraper.scrape_movies_for_date(datetime.date(2025, 3, 14)):
+    for movie_data in scraper.scrape_movies():
         database.save_movie(movie_data)
 
 

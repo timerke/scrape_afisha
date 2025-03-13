@@ -1,6 +1,10 @@
 import datetime
+import logging
 from typing import Any, Dict, Generator, Optional
 import requests
+
+
+logger = logging.getLogger("afisha")
 
 
 class Scraper:
@@ -14,12 +18,14 @@ class Scraper:
 
     @staticmethod
     def _get_movie_info(movie_json: Dict[str, Any]) -> Dict[str, Any]:
-        return {"name": movie_json["Name"],
+        return {"id": movie_json["ID"],
+                "name": movie_json["Name"],
                 "production_year": movie_json["ProductionYear"],
                 "country": movie_json["Country"],
                 "duration": movie_json["Duration"],
                 "synopsis": movie_json["Synopsis"],
-                "rating": movie_json["Rating"]}
+                "rating": movie_json["Rating"],
+                "url": movie_json["Url"]}
 
     @staticmethod
     def _get_movie_poster(movie_json: Dict[str, Any]) -> Optional[bytes]:
@@ -28,16 +34,20 @@ class Scraper:
         return result.content if result.status_code == 200 else None
 
     @staticmethod
-    def _get_url(date: str, page: int) -> str:
-        return (f"https://www.afisha.ru/msk/schedule_cinema/?sort=recommendations&date={date}--{date}&"
-                f"page={page}&pageSize=24")
+    def _get_url(page: int, date: Optional[datetime.date] = None) -> str:
+        if date:
+            date = date.strftime("%Y-%m-%d")
+            return (f"https://www.afisha.ru/msk/schedule_cinema/?sort=recommendations&date={date}--{date}&"
+                    f"page={page}&pageSize=24")
 
-    def scrape_movies_for_date(self, date: datetime.date) -> Generator[Dict[str, Any], None, None]:
-        date_str = date.strftime("%Y-%m-%d")
+        return f"https://www.afisha.ru/msk/schedule_cinema/?sort=recommendations&page={page}&pageSize=24"
+
+    def scrape_movies(self, date: datetime.date = None) -> Generator[Dict[str, Any], None, None]:
         page = 1
         movies_on_page = True
         while movies_on_page:
-            url = self._get_url(date_str, page)
+            logger.info("Scrape page #%d with movies", page)
+            url = self._get_url(page, date)
             response = requests.get(url, headers={"Accept": "application/json",
                                                   "Connection": "keep - alive",
                                                   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) "
